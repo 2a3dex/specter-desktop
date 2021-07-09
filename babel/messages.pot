@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2021-07-08 12:04-0500\n"
+"POT-Creation-Date: 2021-07-09 16:50-0500\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,23 +17,23 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.9.1\n"
 
-#: src/cryptoadvance/specter/node.py:316
+#: src/cryptoadvance/specter/node.py:314
 msgid "Connection to node failed"
 msgstr ""
 
-#: src/cryptoadvance/specter/node.py:326
+#: src/cryptoadvance/specter/node.py:324
 msgid "Core Node might be too old"
 msgstr ""
 
-#: src/cryptoadvance/specter/node.py:343
+#: src/cryptoadvance/specter/node.py:341
 msgid "Failed to connect!"
 msgstr ""
 
-#: src/cryptoadvance/specter/node.py:352
+#: src/cryptoadvance/specter/node.py:350
 msgid "RPC authentication failed!"
 msgstr ""
 
-#: src/cryptoadvance/specter/node.py:366
+#: src/cryptoadvance/specter/node.py:364
 msgid "Failed to connect"
 msgstr ""
 
