@@ -9,7 +9,9 @@ import requests
 import urllib3
 
 from .helpers import is_ip_private
-from .specter_error import SpecterError, handle_exception
+from .specter_error import SpecterError, handle_exception, BrokenCoreConnectionException
+from urllib3.exceptions import NewConnectionError
+from requests.exceptions import ConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -189,10 +191,15 @@ def autodetect_rpc_confs(
             except requests.exceptions.RequestException as e:
                 pass
                 # no point in reporting that here
+            except SpecterError as e:
+                # Timeout
+                pass
             except RpcError:
                 pass
                 # have to make a list of acceptable exception unfortunately
                 # please enlarge if you find new ones
+    else:
+        logger.info(f"No candidates for BTC-connection autodetection found")
     return available_conf_arr
 
 
@@ -366,6 +373,9 @@ class BitcoinRPC:
             r = self.session.post(
                 url, data=json.dumps(payload), headers=headers, timeout=timeout
             )
+        except (ConnectionError, NewConnectionError, ConnectionRefusedError) as ce:
+            raise BrokenCoreConnectionException()
+
         except (requests.exceptions.Timeout, urllib3.exceptions.ReadTimeoutError) as to:
             # Timeout is effectively one of the two:
             # ConnectTimeout: The request timed out while trying to connect to the remote server
@@ -386,6 +396,7 @@ class BitcoinRPC:
                     to,
                 )
             )
+            logger.exception(to)
             raise SpecterError(
                 "Timeout after {} secs while {} call({: <28}). Check the logs for more details.".format(
                     timeout,

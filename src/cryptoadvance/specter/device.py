@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class Device:
     device_type = None  # this is saved to json
     name = "Unknown device"  # this is how device appears in UI
-    icon = "other_icon.svg"
+    icon = "img/devices/other_icon.svg"
 
     # override these vars to add support
     # of different communication methods
@@ -24,6 +24,7 @@ class Device:
     # - "on": animate psbt by default
     # - "off": don't animate psbt even if it is huge
     qr_code_animate = "auto"
+    supports_qr_message_signing = False
     hwi_support = False
     supports_hwi_toggle_passphrase = False
     supports_hwi_multisig_display_address = False
@@ -44,6 +45,19 @@ class Device:
         self.fullpath = fullpath
         self.blinding_key = blinding_key
         self.manager = manager
+
+    @classmethod
+    def blueprint(cls):
+        """calculating the blueprint-name in order to be able to use url_for like:
+        url_for(device.blueprint(), filename=device.icon)
+        will return 'static' for Devices in core and conceptually
+        service.id +'_endpoint' + '.static'
+        for Devices which are located in packages like something.specterext.someext
+        """
+        module_array = cls.__module__.split(".")
+        if "specterext" in module_array:
+            return f"{module_array[2]}_endpoint.static"
+        return "static"
 
     def create_psbts(self, base64_psbt, wallet):
         """
@@ -145,7 +159,7 @@ class Device:
                     return True
         elif wallet_type == "simple":
             for key_type in self.key_types(network):
-                if key_type in ["", "sh-wpkh", "wpkh"]:
+                if key_type in ["", "sh-wpkh", "wpkh", "tr"]:
                     return True
         return "" in self.key_types(network)
 

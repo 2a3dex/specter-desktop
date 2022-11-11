@@ -20,8 +20,12 @@ from stem.control import Controller
 from urllib3.exceptions import NewConnectionError
 
 from cryptoadvance.specter.devices.device_types import DeviceTypes
+from cryptoadvance.specter.services.service_encrypted_storage import (
+    ServiceEncryptedStorageManager,
+    ServiceUnencryptedStorageManager,
+)
 
-from .helpers import clean_psbt, deep_update, is_liquid, is_testnet, get_asset_label
+from .helpers import clean_psbt, deep_update, is_liquid, get_asset_label
 from .internal_node import InternalNode
 from .liquid.rpc import LiquidRPC
 from .managers.config_manager import ConfigManager
@@ -64,7 +68,12 @@ class Specter:
         config={},
         internal_bitcoind_version="",
         checker_threads=True,
+        initialize=True,
     ):
+        """Very basic Initialisation of the Specter Object. Will, by default call specter.initialize() shortly after
+        This might be unwanted (e.g. in server.py) in order to apply specter.service_manager so that all the
+        managers can make callbacks in the initialize method.
+        """
         if data_folder.startswith("~"):
             data_folder = os.path.expanduser(data_folder)
         data_folder = os.path.abspath(data_folder)
@@ -74,30 +83,40 @@ class Specter:
             os.makedirs(data_folder)
 
         self.data_folder = data_folder
+        self._config = config
+        self._internal_bitcoind_version = internal_bitcoind_version
+        self._checker_threads = checker_threads
+        if initialize:
+            self.initialize()
 
+    def initialize(self):
+        """Runs the checker_treads, instantiates all the managers and attach them to its attributes"""
         self.user_manager = UserManager(
             self
         )  # has to come before calling VersionChecker()
 
         # version checker
         # checks for new versions once per hour
+        logger.info("Instantiate VersionChecker")
         self.version = VersionChecker(specter=self)
-        if checker_threads:
+        if self._checker_threads:
             self.version.start()
 
-        self._config_manager = ConfigManager(self.data_folder, config)
+        logger.info("Instantiate ConfigManager")
+        self._config_manager = ConfigManager(self.data_folder, self._config)
 
-        self.internal_bitcoind_version = internal_bitcoind_version
+        self.internal_bitcoind_version = self._internal_bitcoind_version
 
         # Migrating from Specter 1.3.1 and lower (prior to the node manager)
         self.migrate_old_node_format()
 
+        logger.info("Instantiate NodeManager")
         self.node_manager = NodeManager(
             proxy_url=self.proxy_url,
             only_tor=self.only_tor,
             active_node=self.active_node_alias,
             bitcoind_path=self.bitcoind_path,
-            internal_bitcoind_version=internal_bitcoind_version,
+            internal_bitcoind_version=self._internal_bitcoind_version,
             data_folder=os.path.join(self.data_folder, "nodes"),
         )
 
@@ -132,13 +151,23 @@ class Specter:
 
         self.update_tor_controller()
         self.checker = Checker(lambda: self.check(check_all=True), desc="health")
-        if checker_threads:
+        if self._checker_threads:
             self.checker.start()
         self.price_checker = Checker(
             lambda: update_price(self, self.user), desc="price"
         )
-        if self.price_check and self.price_provider and checker_threads:
+        if self.price_check and self.price_provider and self._checker_threads:
             self.price_checker.start()
+
+        # Configuring the two different storages (Universal json-files)
+        logger.info("Instantiate ServiceEncryptedStorageManager")
+        self.service_encrypted_storage_manager = ServiceEncryptedStorageManager(
+            self.data_folder, self.user_manager
+        )
+        logger.info("Instantiate ServiceUnencryptedStorageManager")
+        self.service_unencrypted_storage_manager = ServiceUnencryptedStorageManager(
+            self.data_folder, self.user_manager
+        )
 
         if threading.current_thread() is threading.main_thread():
             # Python signal handlers are always executed in the main Python thread and only the main thread is allowed to set a new signal handler.
@@ -192,7 +221,7 @@ class Specter:
                 u.check()
 
     @property
-    def node(self):
+    def node(self) -> Node:
         try:
             return self.node_manager.active_node
         except SpecterError as e:
@@ -642,7 +671,7 @@ class Specter:
 
     @property
     def autohide_sensitive_info_timeout(self):
-        return self.user_config.get("autohide_sensitive_info_timeout_minutes", 20)
+        return self.user_config.get("autohide_sensitive_info_timeout_minutes", None)
 
     @property
     def autologout_timeout(self):
@@ -738,7 +767,6 @@ class Specter:
                 old_rpc.get("port", None),
                 old_rpc.get("host", "localhost"),
                 old_rpc.get("protocol", "http"),
-                True,
                 os.path.join(os.path.join(self.data_folder, "nodes"), "default.json"),
                 "BTC",
                 self,

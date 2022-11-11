@@ -23,6 +23,24 @@ afterServiceManagerInit = "afterServiceManagerInit"
 """
 after_serverpy_init_app = "after_serverpy_init_app"
 
+""" Extensions which want to extend the settings dialog
+    needs to return something like: return [{"title": "token", "endpoint":"settings_token"}]
+    Check the extension-docs for a comprehensive example.
+"""
+add_settingstabs = "add_settingstabs"
+
+""" Extensions which want to extend the wallet dialog
+    needs to return something like: return [{"title": "sometitle", "endpoint":"yourendpoint"}]
+    Check the extension-docs for a comprehensive example.
+"""
+add_wallettabs = "add_wallettabs"
+
+""" Endpoints might define their behaviour via a ViewModel. Those Models are passed here and
+    extensions can modify that behaviour via Modifying that model. Currently there is only:
+    cryptoadvance.specter.server_enpoints.welcome.welcome_vm.WelcomeVm
+"""
+adjust_view_model = "adjust_view_model"
+
 """
     This one is called, whenever a file is persisted. To call external scripts in another
     process, you better use the SPECTER_PERSISTENCE_CALLBACK Env Var or it's asynchronous cousin

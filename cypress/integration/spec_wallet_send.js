@@ -30,7 +30,36 @@ describe('Test sending transactions', () => {
             expect(n).to.be.equals(0)
         })
     })
-    
+
+    // 
+    it('Open up transaction details', () => {
+        cy.selectWallet("Test Hot Wallet 1")
+        cy.get('#btn_transactions').click()
+        // Click on the txid of the (hopefully) only send tx
+        cy.get('tbody.tx-tbody').find('tr').find('.svg-send').parent().parent().parent().find('#column-txid').find('.explorer-link').click()
+        // Input
+        cy.get('.tx-data-info').contains('Value: 20 tBTC')
+        // Output
+        cy.get('.tx-data-info').contains(/Value:\s19\.9999\d{3}/) // The amount from the raw tx has 7 decimals, fees change apparently
+        cy.get('#page_overlay_popup_cancel_button').click()
+        // Change to sats and check amounts and units
+        cy.get('[href="/settings/"]').click()
+        cy.get('[name="unit"]').select('sats')
+        cy.contains('Save').click()
+        cy.selectWallet("Test Hot Wallet 1")
+        cy.get('#btn_transactions').click()
+        cy.get('tbody.tx-tbody').find('tr').find('.svg-send').parent().parent().parent().find('#column-txid').find('.explorer-link').click()
+        // Input
+        cy.get('.tx-data-info').contains('Value: 2,000,000,000 tsat')
+        // Output
+        cy.get('.tx-data-info').contains(/Value:\s1,999,99\d,\d{3}\stsat/) // Fees change apparently
+        cy.get('#page_overlay_popup_cancel_button').click()
+        // Change back to btc
+        cy.get('[href="/settings/"]').click()
+        cy.get('[name="unit"]').select('BTC')
+        cy.contains('Save').click()
+    })
+
     it('Adding and deleting recipients', () => {
         // We need new sats but mine2wallet only works if a wallet is selected
         cy.selectWallet("Test Hot Wallet 1")
